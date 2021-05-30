@@ -1,0 +1,413 @@
+---
+title: Causality relationships among the Vale's stocks return, macroeconomic 
+indicators and environmental disasters
+author: "Thiago Balbo Batista"
+year: '2020'
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Requesting the packages
+
+
+```{r library, echo=FALSE}
+library("urca")
+library("forecast")
+library("vars")
+library("tseries")
+library("aTSA")
+library("readxl")
+library("stargazer")
+library("gridExtra")
+```
+
+## Importing the dataset
+
+
+```{r dataset, echo=FALSE}
+
+base = read_excel("C:/Users/HP/Desktop/Portfolio/Projeto - barragens/Base.xlsx", sheet = 3)
+
+names(base)[17] = "ACID_AMB."
+
+attach(base)
+
+```
+
+## Setting the directory
+
+
+```{r directory}
+
+getwd()
+
+setwd("C:/Users/HP/Desktop/Portfolio")
+
+```
+## Pre-analysis
+
+### Converting variables to time series
+
+The endogenous variables are described in the list below, highlighting that all
+of them are monthly percentage variation:
+
+-t.PIB = Brazilian PIB
+-t.IPCA = IPCA (a Brazilian inflation index)
+-t.SELIC = SELIC (the Brazilian interest rate)
+-t.EX = Exchange Rate (US$/ BRL)
+-t.ibov = Ibovespa (the Brazilian Financial Market Index)
+-t.retorno = Vale's stock return (VALE3 at B3)
+
+The exogeneous variables are:
+
+-t.P = Iron ore spot price (monthly percentage variation)
+-ACID.AMB = monthly accidents in mining dams (dummy variable)
+
+
+```{r time series, echo=FALSE}
+
+t.PIB = ts(`PIB ( Variacao % a.m.)`, start=c(2010,1), end = c(2019,12), frequency =12)
+
+t.IPCA = ts(`Inflacao - IPCA - (% a.m.)`, start=c(2010,1), end = c(2019,12), frequency =12)
+
+t.SELIC = ts(`SELIC (% a.m.)`, start=c(2010,1), end = c(2019,12), frequency =12)
+
+t.EX = ts(`Cambio (% a.m.)`, start=c(2010,1), end = c(2019,12), frequency =12)
+
+t.ibov = ts(`Ibovespa - fechamento - (% a.m.)`, start=c(2010,1), end = c(2019,12), frequency =12)
+
+t.P = ts(`Variacao em US$ (%)`, start=c(2010,1), end = c(2019,12), frequency =12)
+
+t.retorno = ts(`Retorno VALE`, start=c(2010,1), end = c(2019,12), frequency =12)
+
+```
+
+
+### Stationarity tests
+
+The vector autoregressive model (VAR) requires endogenous variables that are 
+stationaries, in other words, constant mean and variance in any period.
+
+The stationary test that we use in this project are:
+
+- Augmented Dickey–Fuller (ADF) Test 
+- Kwiatkowski–Phillips–Schmidt–Shin (KPSS) Test 
+- Phillips-Perron (PP) Test 
+
+In hypothesis tests, the null hypothesis of the ADF and Phillips-Perron tests
+is the presence of a unit root.
+
+#### t.PIB:
+
+```{r t.PIB ADF, echo=FALSE}
+
+PIB.adf <- ur.df(t.PIB, selectlags = "AIC", type = "none")
+summary(PIB.adf)
+
+PIB.adf2 <- ur.df(t.PIB, selectlags = "AIC", type = "trend")
+summary(PIB.adf2)
+
+```
+As we can see above, in the ADF Test, with and without trend, we reject the null
+hypothesis. Thus, the variable t.PIB is stationary of order 0, I(0).
+
+
+```{r t.PIB kpss, echo=FALSE}
+
+PIB.kpss <- ur.kpss(t.PIB, type = "mu", lags = "short")
+summary(PIB.kpss)
+
+```
+Also, we check that the kpss test don't reject the null hypothesis. So, we still
+detect the presence of a unit root or the stationarity of order 0.
+
+```{r t.PIB pp, echo=FALSE}
+
+PIB.pp2 <- ur.pp(t.PIB, type = "Z-tau", lags = "short", model = c("constant", "trend"))
+summary(PIB.pp2)
+
+```
+
+Finally, in the PP Test we confirm that the variable t.PIB is stationary of 
+order 0, I(0).
+
+
+#### t.IPCA
+
+```{r t.IPCA ADF, echo=FALSE}
+
+IPCA.adf <- ur.df(t.IPCA, selectlags = "AIC", type = "none")
+summary(IPCA.adf)
+
+IPCA.adf2 <- ur.df(t.IPCA, selectlags = "AIC", type = "trend")
+summary(IPCA.adf2)
+
+```
+The ADF tests, with and without trend, show that the endogenous variable
+t.IPCA has the presence of a unit root.
+
+```{r t.PIB kpss, echo=FALSE}
+
+IPCA.kpss <- ur.kpss(t.IPCA, type = "mu", lags = "short")
+summary(IPCA.kpss)
+
+```
+
+The KPSS test shows that the variable t.IPCA is stationary of order 0.
+
+
+```{r t.PIB pp, echo=FALSE}
+
+PIB.pp2 <- ur.pp(t.PIB, type = "Z-tau", lags = "short", model = c("constant", "trend"))
+summary(PIB.pp2)
+
+```
+Lastly, the PP Test shows the stationarity of this variable.
+
+
+```{r t.PIB kpss, echo=FALSE}
+
+IPCA.kpss <- ur.kpss(t.IPCA, type = "mu", lags = "short")
+summary(IPCA.kpss)
+
+```
+
+
+#### t.SELIC
+
+
+```{r t.SELIC ADF, echo=FALSE}
+
+selic.adf <- ur.df(t.SELIC, selectlags = "AIC", type = "none")
+summary(selic.adf)
+
+selic.adf2 <- ur.df(t.SELIC, selectlags = "AIC", type = "trend")
+summary(selic.adf2)
+
+```
+The ADF tests, with and without trend, show that the variable t.SELIC is stationary of order 0, I(0).
+
+
+```{r t.SELIC KPSS, echo=FALSE}
+
+selic.kpss <- ur.kpss(t.SELIC, type = "mu", lags = "short")
+summary(selic.kpss)
+
+
+```
+Also, we don't reject the null hypothesis in the KPSS test. For this reason, we accept that the variable t.SELIC is stationary.
+
+```{r t.SELIC KPSS, echo=FALSE}
+
+selic.pp2 <- ur.pp(t.SELIC, type = "Z-tau", lags = "short", model = c("constant", "trend"))
+summary(selic.pp2)
+
+```
+
+Finally, the KPSS test signalizes that this time series is stationary.
+
+
+
+#### t.EX 
+
+```{r t.EX ADF, echo=FALSE}
+
+EX.adf <- ur.df(t.EX, selectlags = "AIC", type = "none")
+summary(EX.adf)
+
+EX.adf2 <- ur.df(t.EX, selectlags = "AIC", type = "trend")
+summary(EX.adf2)
+
+```
+The ADF tests, with and without trends, show that the variable t.EX is stationary.
+
+```{r t.EX KPSS, echo=FALSE}
+
+EX.kpss <- ur.kpss(t.EX, type = "mu", lags = "short")
+summary(EX.kpss)
+
+```
+As we can see above, we don't reject the null hypothesis. So, this time series is stationary of order 0, I(0).
+
+
+```{r t.EX KPSS, echo=FALSE}
+
+EX.pp2 <- ur.pp(t.EX, type = "Z-tau", lags = "short", model = c("constant", "trend"))
+summary(EX.pp2)
+
+```
+
+
+Finally, we also check by the KPSS test that this variable is stationary of order 0, I(0).
+
+
+#### t.ibov
+
+```{r t.ibov ADF, echo=FALSE}
+
+ibov.adf <- ur.df(t.ibov, selectlags = "AIC", type = "none")
+summary(ibov.adf)
+
+ibov.adf2 <- ur.df(t.ibov, selectlags = "AIC", type = "trend")
+summary(ibov.adf2)
+
+```
+
+The ADF tests, with and without trend, shows that this time series is stationary of order 0, I(0).
+
+```{r t.ibov KPSS, echo=FALSE}
+
+ibov.kpss <- ur.kpss(t.ibov, type = "mu", lags = "short")
+summary(P.kpss)
+
+```
+This KPSS test signalizes that this variable is stationary, just like the ADF tests.
+
+```{r t.ibov PP, echo=FALSE}
+
+ibov.pp2 <- ur.pp(t.ibov, type = "Z-tau", lags = "short", model = c("constant", "trend"))
+summary(ibov.pp2)
+
+```
+
+
+At last, the PP test shows that the variable t.ibov is stationary of order 0, I(0).
+
+#### t.retorno
+
+```{r t.retorno PP, echo=FALSE}
+
+vale.adf <- ur.df(t.retorno, selectlags = "AIC", type = "none")
+summary(vale.adf)
+
+vale.adf2 <- ur.df(t.retorno, selectlags = "AIC", type = "trend")
+summary(vale.adf2)
+
+```
+As we can see above, the variable t.retorno is stationary of order 0.
+
+
+```{r t.retorno PP, echo=FALSE}
+
+vale.kpss <- ur.kpss(t.retorno, type = "mu", lags = "short")
+summary(vale.kpss)
+
+```
+Also, the KPSS test shows that this time series has the presence of a unit root.
+
+
+```{r t.retorno PP, echo=FALSE}
+
+vale.pp2 <- ur.pp(t.retorno, type = "Z-tau", lags = "short", model = c("constant", "trend"))
+summary(vale.pp2)
+
+```
+The PP test confirms the stationarity of the variable t.retorno. So, we conclude that all endogenous variables are stationary of order 0 and that we don't need apply the first difference to estimate the VAR Model. Possibly because these variables are already a monthly porcentage variation.
+
+### Analysis
+
+As we have found that these variables are I(0), we didn't apply the Johansen Test to check the cointegration nor the Granger Causality Test to verify the direction of causalities among these endogenous variables.
+
+Also, we use the Cholesky Decomposition to establish the order of the endogenous variables to estimate the Var Model: t.ibov > t.IPCA > t.SELIC > t.EX > t.PIB > t.retorno. The variables t.P and ACID_AMB are exogenous.  
+
+```{r vAR matrix, echo=FALSE}
+
+VARM = data.frame(t.ibov, t.IPCA,t.SELIC, t.EX, t.PIB, t.retorno)
+View(VARM)
+
+```
+
+Then, we select the most fitted model based on the tests AIC, HQ, SC, FPE:
+
+```{r vAR Selection, echo=FALSE}
+
+SELVAR = VARselect(VARM, exogen = cbind(ACID_AMB., t.P), type = "const", lag.max = 12)
+
+SELVAR$selection
+
+```
+As we can see above, the most suitable VAR model is the one with 1 lag. So, we estimate the VAR Model and obtain the results of this project:
+
+```{r vAR Selection, echo=FALSE}
+
+model = VAR(VARM, p = 1, exogen = cbind(ACID_AMB., t.P), type="const", ic = c("AIC", "HQ", "SC", "FPE"))
+
+summary(model)
+
+grid.table(VAR_results)
+
+```
+We observe that t.return has a positive relationship with the variable t.ibov of 1 lag, which 1% variation increases the return of VALE3 by 0.009%. This result, although quantitatively low, may indicate a small link of dependence between VALE's financial assets and the expectations of the financial market.
+
+The variation of 1% of t.retorno of 1 lag reduces contemporary t.retorno by -0.135%. This relationship may be linked to VALE3's high volatility or even to incomplete information regarding the real economy since macroeconomic indicators can impact Vale's cash flow or profitability.
+
+In relation to the price of iron ore in the spot market, the variation of 1% in the variable t.P, of 1 lag, increases the t.retorno value by 0.478%. This result may indicate that the spot price is directly related to the cash flow generation and future dividend payments by VALE,  because, despite the fact that the main mining companies do not determine the price in the sector, they use the strategy of keeping the price low enough in relation to competitors, but also moderately high to be above the direct costs average.
+
+Finally, the results, regarding the endogenous variables t.IPCA, t.SELIC, t.EC and t.PIB, are not statistically significant, which is opposite to what is expected in the literature, given that there is a positive correlation between the real economy and return asset.
+
+Afterwards, we make the impulse-response functions:
+
+```{r vAR Selection, echo=FALSE}
+
+# t.ibov
+
+IR.IBOV.1000 = irf(model, response = "t.retorno", impulse = "t.ibov", boot = TRUE, n.ahead = 12, runs = 1000)
+
+graf.IR.IBOV.1000 = plot(IR.IBOV.1000, main = "Response of Vale's returns to Ibovespa", ylab = "Vale's Returns")
+
+# t.IPCA
+
+IR.IPCA.1000 = irf(model, response = "t.retorno", impulse = "t.IPCA", boot = TRUE, n.ahead = 12, runs = 1000)
+
+graf.IPCA.1000 = plot(IR.IBOV.1000, main = "Response of Vale's returns to IPCA",
+                    ylab = "Vale's Returns")
+
+# t.SELIC
+IR.SELIC.1000 = irf(model, response = "t.retorno", impulse = "t.SELIC", boot = TRUE, n.ahead = 12, runs = 1000)
+
+
+graf.SELIC.1000 = plot(IR.IBOV.1000, main = "Response of Vale's returns to SELIC", ylab = "Vale's Returns")
+
+# t.EX
+
+IR.EX.1000 = irf(model, response = "t.retorno", impulse = "t.EX", boot = TRUE, 
+                    n.ahead = 12, runs = 1000)
+
+
+graf.EX.1000 = plot(IR.IBOV.1000, main = "Response of Vale's returns to Exchange Rate", ylab = "Vale's Returns")
+
+# t.PIB
+
+IR.PIB.1000 = irf(model, response = "t.retorno", impulse = "t.PIB", boot = TRUE, 
+                   n.ahead = 12, runs = 1000)
+
+graf.PIB.1000 = plot(IR.IBOV.1000, main = "Response of Vale's returns to PIB",
+                      ylab = "Vale's Returns")
+
+```
+The impulse-response functions show that t.ibov presents a positive shock in t.retorn, stabilizing after the 4th month. The t.IPCA, in turn, transmits a negative shock to t.retorno and converges to equilibrium around the 8th month. The t.SELIC's shock, on the other hand, incurs a negative variation of t.retorno and converges to stability between the 4th and 6th month, meaning that the negative impact on the real economy reduces the returns in the stock market. The t.EX's shock has a first positive effect and, later, an oscillatory pattern until the equilibrium around the 6th month, which may indicate that a depreciation of the Real against foreign currencies, at first, increases the demand for VALE3 and, consequently, its return. Finally, the GDP causes positive responses in t.retorno, and the shock stabilizes around the 4th month, which may be related to Vale's expectations of profitability and its future dividend payments.
+
+Lastly, we make the variance decomposition:
+
+```{r vAR Selection, echo=FALSE}
+
+V.DECOMP. = fevd(model, n.ahead = 12)
+
+V.DECOMP.
+
+```
+Thus, the  variance decomposition shows that most of the variance of the Vale's returns occurs by its own variance (about 96%), fallowed by the variance of the Ibovespa (Brazilian financial market index), that is, 26% after 12 months. We can see the variance decomposition below:
+
+### Conclusion
+
+
+The results show that t.retorno is mainly related to its volatility, to the iron ore price, and the Ibovespa. Also, the analysis shows that environmental accidents do not impact Vale's return, in the long run, concluding that environmental impacts are absorbed by the stock market.
+
+Finally, new projects that involve time series, returns on financial assets, and other companies/industries, that directly impact environmental resources, are recommended.
+
+
