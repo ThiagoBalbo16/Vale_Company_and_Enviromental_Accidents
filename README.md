@@ -49,3 +49,7 @@ The dataset was extracted in the sources below:
 
 - [Yahoo Finance](https://finance.yahoo.com/)
 - [Central Bank of Brazil](https://www4.bcb.gov.br/pec/series/port/aviso.asp?frame=1)
+
+##
+
+Developed by [Thiago Balbo](https://github.com/ThiagoBalbo16)
