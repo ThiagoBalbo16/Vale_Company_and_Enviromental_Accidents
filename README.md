@@ -1,6 +1,5 @@
 # Causality relationships among the Vale's stocks return, macroeconomic indicators and environmental disasters
 
-[About](##about) | [Methodology](#methodology) | [Technology](#technology) | [Libraries](#libraries) 
 
 ## About
 
@@ -43,3 +42,10 @@ RStudio (R programming language)
 - tseries 
 - urca
 - vars
+
+## Source
+
+The dataset was extracted in the sources below:
+
+- [Yahoo Finance](https://finance.yahoo.com/)
+- [Central Bank of Brazil](https://www4.bcb.gov.br/pec/series/port/aviso.asp?frame=1)
